@@ -26,7 +26,7 @@ const upload = multer({ storage: storage })
 //          - 404: User not found.
 //          - 409: Face rec files already exist for this user.
 //          - 500: Unknown server error.
-faceRec_router.post('/:name', upload.array('image', 1), async (req,res) => {
+faceRec_router.post('/:name', upload.array('image', 6), async (req,res) => {
     // Find user we are adding this to
     let doesExist = true
 
@@ -86,98 +86,6 @@ faceRec_router.post('/:name', upload.array('image', 1), async (req,res) => {
                 await currUser.save()
 
                 res.status(201).json(newFaceRecSchema)
-            } 
-            catch (err) {
-                console.error(err);
-                res.locals.data = { message: "Unknown error in creating face rec entry." };
-                res.status(500).json(res.locals.data);
-            }
-        }
-    }
-})
-
-// This PUT: Adds image to face rec entry.
-//      The req.params will contain the name of the user
-//          - Can access by req.params.name
-//      The req.files will contain array of image files
-//      Responses defined as follows:
-//          - 201: Entry created.
-//          - 400: Bad user input.
-//          - 404: User not found.
-//          - 409: Face rec files already exist for this user.
-//          - 500: Unknown server error.
-faceRec_router.put('/:name', upload.array('image', 1), async (req,res) => {
-    // Find user we are adding this to
-    let doesExist = true
-
-    try {
-        // Check if user exists
-        if((currUser = await User.findOne({ name: req.params.name })) === null) {
-            res.locals.data = { message: "User does not exist." }
-            res.status(404).json(res.locals.data)
-            doesExist = false       
-        }
-        else {
-            // If user does exist, check if they already have face rec setup
-            if(currUser.faceRec === undefined) {
-                res.locals.data = { message: "User already has face rec set up." }
-                res.status(409).json(res.locals.data)
-                doesExist = false
-            }
-        }
-    }
-    catch (err) { // Case for unknown server error
-        console.error(err)
-        res.locals.data = { message: "Unknown error in finding user." }
-        res.status(500).json(res.locals.data)
-        doesExist = false
-    }
-
-    if(doesExist) {
-        // Validate input 
-        const fileArray = req.files
-        let isValid = true
-        if(!fileArray || fileArray.length === 0) {
-            res.locals.status = { message: "No images uploaded." }
-            res.status(400).json(res.locals.status)
-            isValid = false
-        }
-
-        if(isValid) {
-            try {
-                let imageArray = []
-
-                // Get face rec entry 
-                if((currFaceRec = await FaceRec.findById(currUser.faceRec)) === null) {
-                    res.locals.data = { message: "Face Rec entry could not be found." }
-                    res.status(404).json(res.locals.data)
-                }
-                else {
-                    // Extract array 
-                    imageArray = currFaceRec.images
-
-                    // Check if we have reached 6 images yet
-                    if(imageArray.length === 6) {
-                        res.locals.data = { message: "Array is full." }
-                        res.status(403).json(res.locals.data)
-                    }
-                    else {
-                        // Add image to array
-                        for(const file of fileArray) {
-                            imageArray.push({
-                                data: file.buffer,
-                                contentType: file.mimetype
-                            })
-                        }
-
-                        // Update entry, save, and respond
-                        currFaceRec.imageArray = imageArray
-
-                        await currFaceRec.save()
-
-                        res.status(200).json(currFaceRec) 
-                    }
-                }
             } 
             catch (err) {
                 console.error(err);
